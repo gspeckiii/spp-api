@@ -2,18 +2,20 @@ const express = require("express")
 const dotenv = require("dotenv")
 const cors = require("cors")
 const userRoutes = require("./routes/userRoutes")
-const categoryRoutes = require("./routes/categoryRoutes") // New route file
+const categoryRoutes = require("./routes/categoryRoutes")
+const imageRoutes = require("./routes/imageRoutes") // New route file
 
-console.log("Attempting to load userRoutes and categoryRoutes")
+console.log("Attempting to load userRoutes, categoryRoutes, and imageRoutes")
 try {
   const userRoutes = require("./routes/userRoutes")
-  const categoryRoutes = require("./routes/categoryRoutes") // Load category routes
-  console.log("userRoutes.js and categoryRoutes.js loaded successfully")
+  const categoryRoutes = require("./routes/categoryRoutes")
+  const imageRoutes = require("./routes/imageRoutes") // Load image routes
+  console.log("userRoutes.js, categoryRoutes.js, and imageRoutes.js loaded successfully")
 } catch (error) {
   console.error("Failed to load routes:", error.stack)
 }
 
-if (!userRoutes || !categoryRoutes) {
+if (!userRoutes || !categoryRoutes || !imageRoutes) {
   console.error("One or more route files are undefined, routes will not be available")
 }
 
@@ -35,7 +37,8 @@ app.use((req, res, next) => {
 })
 
 app.use("/api", userRoutes)
-app.use("/api", categoryRoutes) // Mount category routes under /api
+app.use("/api", categoryRoutes)
+app.use("/api", imageRoutes) // Mount image routes under /api
 
 app.get("/", (req, res) => {
   res.json({ message: "SPP API is running" })
