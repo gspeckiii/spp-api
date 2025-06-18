@@ -3,19 +3,23 @@ const dotenv = require("dotenv")
 const cors = require("cors")
 const userRoutes = require("./routes/userRoutes")
 const categoryRoutes = require("./routes/categoryRoutes")
-const imageRoutes = require("./routes/imageRoutes") // New route file
+const productRoutes = require("./routes/productRoutes")
+const imageRoutes = require("./routes/imageRoutes")
 
-console.log("Attempting to load userRoutes, categoryRoutes, and imageRoutes")
+console.log("Attempting to load userRoutes, categoryRoutes, and imageRoutes and productRoutes...")
+
 try {
+  const productRoutes = require("./routes/productRoutes")
   const userRoutes = require("./routes/userRoutes")
   const categoryRoutes = require("./routes/categoryRoutes")
   const imageRoutes = require("./routes/imageRoutes") // Load image routes
-  console.log("userRoutes.js, categoryRoutes.js, and imageRoutes.js loaded successfully")
+
+  console.log("userRoutes.js, categoryRoutes.js, and imageRoutes.js and productRoutes loaded successfully")
 } catch (error) {
   console.error("Failed to load routes:", error.stack)
 }
 
-if (!userRoutes || !categoryRoutes || !imageRoutes) {
+if (!userRoutes || !categoryRoutes || !imageRoutes || !productRoutes) {
   console.error("One or more route files are undefined, routes will not be available")
 }
 
@@ -35,7 +39,7 @@ app.use((req, res, next) => {
   console.log(`Received ${req.method} request for ${req.url} from ${req.get("origin")} with body:`, req.body)
   next()
 })
-
+app.use("/api", productRoutes)
 app.use("/api", userRoutes)
 app.use("/api", categoryRoutes)
 app.use("/api", imageRoutes) // Mount image routes under /api
@@ -48,3 +52,5 @@ const PORT = process.env.PORT || 8080
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
+// ... (existing server.js code)
+module.exports = app
