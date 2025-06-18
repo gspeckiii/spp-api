@@ -3,7 +3,7 @@ const categoryModel = require("../models/category")
 exports.createCategory = async (req, res) => {
   const { cat_name, cat_desc, cat_vid } = req.body
   try {
-    const category = await categoryModel.create({ cat_name, cat_desc, cat_vid })
+    const category = await categoryModel.create({ cat_name, cat_desc, cat_vid, prod_count })
     res.status(201).json(category)
   } catch (error) {
     res.status(500).json({ error: error.message })

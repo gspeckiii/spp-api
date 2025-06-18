@@ -3,30 +3,119 @@ const pool = require("../config/database")
 const User = {
   findAll: async () => {
     console.log("Attempting to query users table...")
-    const result = await pool.query("SELECT * FROM users").catch(err => {
+    try {
+      const result = await pool.query("SELECT * FROM users").catch(err => {
+        console.error("Database query error:", err.stack)
+        throw err
+      })
+      console.log("Query successful, rows:", result.rows.length)
+      return result.rows
+    } catch (err) {
       console.error("Database query error:", err.stack)
       throw err
-    })
-    console.log("Query successful, rows:", result.rows.length)
-    return result.rows
+    }
   },
+
   findById: async id => {
-    const result = await pool.query("SELECT * FROM users WHERE user_id = $1", [id])
-    return result.rows[0]
+    try {
+      const result = await pool.query("SELECT * FROM users WHERE user_id = $1", [id])
+      return result.rows[0]
+    } catch (err) {
+      console.error("Find by ID error:", err.stack)
+      throw err
+    }
   },
+
+  findByUsername: async username => {
+    try {
+      const result = await pool.query("SELECT * FROM users WHERE username = $1", [username])
+      return result.rows[0]
+    } catch (err) {
+      console.error("Find by username error:", err.stack)
+      throw err
+    }
+  },
+
   create: async user => {
-    const { username, email, avatar, bio, password } = user
-    const result = await pool.query("INSERT INTO users (username, email, avatar, bio, password) VALUES ($1, $2, $3, $4, crypt($5, gen_salt('bf'))) RETURNING *", [username, email, avatar, bio, password])
-    return result.rows[0]
+    const { username, email, avatar, bio, password, admin = false } = user
+    try {
+      const result = await pool.query("INSERT INTO users (username, email, avatar, bio, password, admin) VALUES ($1, $2, $3, $4, crypt($5, gen_salt('bf')), $6) RETURNING *", [username, email, avatar, bio, password, admin])
+      return result.rows[0]
+    } catch (err) {
+      console.error("Create user error:", err.stack)
+      throw err
+    }
   },
+
   update: async (id, user) => {
-    const { username, email, avatar, bio, password } = user
-    const result = await pool.query("UPDATE users SET username = $1, email = $2, avatar = $3, bio = $4, password = crypt($5, gen_salt('bf')) WHERE user_id = $6 RETURNING *", [username, email, avatar, bio, password, id])
-    return result.rows[0]
+    const { username, email, avatar, bio, password, admin } = user
+    const currentUser = await User.findById(id)
+    if (!currentUser) throw new Error("User not found")
+
+    const updateFields = []
+    const values = []
+    let index = 1
+
+    if (username && username !== currentUser.username) {
+      updateFields.push(`username = $${index++}`)
+      values.push(username)
+    }
+    if (email && email !== currentUser.email) {
+      updateFields.push(`email = $${index++}`)
+      values.push(email)
+    }
+    if (avatar !== undefined && avatar !== currentUser.avatar) {
+      updateFields.push(`avatar = $${index++}`)
+      values.push(avatar)
+    }
+    if (bio !== undefined && bio !== currentUser.bio) {
+      updateFields.push(`bio = $${index++}`)
+      values.push(bio)
+    }
+    if (password && password !== currentUser.password) {
+      updateFields.push(`password = crypt($${index++}, gen_salt('bf'))`)
+      values.push(password)
+    }
+    if (admin !== undefined && admin !== currentUser.admin) {
+      updateFields.push(`admin = $${index++}`)
+      values.push(admin)
+    }
+    values.push(id)
+
+    if (updateFields.length === 0) return currentUser
+
+    const query = `UPDATE users SET ${updateFields.join(", ")} WHERE user_id = $${index} RETURNING *`
+    try {
+      const result = await pool.query(query, values)
+      console.log("Update result:", result.rowCount)
+      return result.rows[0]
+    } catch (err) {
+      console.error("Update user error:", err.stack)
+      throw err
+    }
   },
+
   delete: async id => {
-    const result = await pool.query("DELETE FROM users WHERE user_id = $1 RETURNING *", [id])
-    return result.rows[0]
+    try {
+      const result = await pool.query("DELETE FROM users WHERE user_id = $1 RETURNING *", [id])
+      if (!result.rows[0]) throw new Error("User not found")
+      return result.rows[0]
+    } catch (err) {
+      console.error("Delete user error:", err.stack)
+      throw err
+    }
+  },
+
+  verifyPassword: async (username, password) => {
+    try {
+      const user = await User.findByUsername(username)
+      if (!user) throw new Error("User not found")
+      const result = await pool.query("SELECT crypt($1, $2) = $2 AS match", [password, user.password])
+      return result.rows[0].match
+    } catch (err) {
+      console.error("Verify password error:", err.stack)
+      throw err
+    }
   }
 }
 
