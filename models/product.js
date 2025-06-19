@@ -84,7 +84,7 @@ const Product = {
   },
 
   findByCategoryId: async categoryId => {
-    const qry = "select distinct products.id,products.prod_name,products.prod_desc,products.prod_cost,count(product_image.id) img_count from products left join categories on products.cat_fk=categories.id left join product_image on products.id=product_image.prod_fk where categories.id = $1 group by products.id,products.prod_name,products.prod_desc,products.prod_cost"
+    const qry = "select distinct products.id,products.prod_name,products.prod_desc,products.prod_cost,count(image_product.id) img_count from products left join categories on products.cat_fk=categories.id left join image_product on products.id=image_product.product_id where categories.id = $1 group by products.id,products.prod_name,products.prod_desc,products.prod_cost"
     try {
       console.log("Executing findByCategoryId query for category ID:", categoryId) // Debug
       const result = await pool.query(qry, [categoryId])

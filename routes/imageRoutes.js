@@ -2,17 +2,46 @@ const express = require("express")
 const router = express.Router()
 const { authenticateToken } = require("../middleware/auth")
 const imageController = require("../controllers/imageController")
+const multer = require("multer")
+const path = require("path")
 
-router.post("/images", authenticateToken, imageController.createImage)
-router.get("/images", imageController.getAllImages)
-router.get("/images/:id", imageController.getImageById)
-router.put("/images/:id", authenticateToken, imageController.updateImage)
-router.delete("/images/:id", authenticateToken, imageController.deleteImage)
+const storage = multer.diskStorage({
+  destination: "./images/",
+  filename: (req, file, cb) => {
+    console.log("Received file:", file.originalname) // Debug
+    cb(null, `${Date.now()}-${file.originalname}`)
+  }
+})
 
-router.post("/category-image", authenticateToken, imageController.linkCategoryImage)
-router.get("/category-images", imageController.getCategoryImages)
+const fileFilter = (req, file, cb) => {
+  const filetypes = /jpeg|jpg|png|gif/
+  const extname = filetypes.test(path.extname(file.originalname).toLowerCase())
+  const mimetype = filetypes.test(file.mimetype)
+  if (extname && mimetype) {
+    return cb(null, true)
+  } else {
+    cb(new Error("Error: Images only!"))
+  }
+}
 
-router.post("/product-image", authenticateToken, imageController.linkProductImage)
-router.get("/product-images", imageController.getProductImages)
+const upload = multer({ storage, fileFilter, limits: { fileSize: 1000000 } }).array("image", 5) // Allow up to 5 images
+
+router.post(
+  "/images/product/:productId",
+  authenticateToken,
+  (req, res, next) => {
+    console.log("Middleware triggered, files:", req.files) // Debug
+    upload(req, res, err => {
+      if (err) {
+        console.error("Multer error:", err.message)
+        return res.status(400).json({ error: err.message })
+      }
+      next()
+    })
+  },
+  imageController.createImage
+)
+
+router.get("/images/product/:productId", authenticateToken, imageController.getImagesByProductId)
 
 module.exports = router

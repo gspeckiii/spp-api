@@ -1,92 +1,39 @@
-const imageModel = require("../models/image")
+const Image = require("../models/image")
+const path = require("path")
 
 exports.createImage = async (req, res) => {
-  const { img_name, img_display } = req.body
+  const { productId } = req.params
   try {
-    const image = await imageModel.create({ img_name, img_display })
-    res.status(201).json(image)
+    console.log("Creating image for product ID:", productId)
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: "No images uploaded" })
+    }
+
+    const images = []
+    for (const file of req.files) {
+      const imgPath = path.join("images", file.filename)
+      const imgName = file.originalname
+      const image = await Image.create(productId, { img_path: imgPath, img_name: imgName, img_desc: "" })
+      images.push(image)
+    }
+
+    console.log("Images created successfully:", images)
+    res.status(201).json(images)
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    console.error("Create image error:", error.stack)
+    res.status(400).json({ error: error.message })
   }
 }
 
-exports.getAllImages = async (req, res) => {
+exports.getImagesByProductId = async (req, res) => {
+  const { productId } = req.params
   try {
-    const images = await imageModel.findAll()
-    res.json(images)
+    console.log("Fetching images for product ID:", productId)
+    const images = await Image.findByProductId(productId)
+    console.log("Fetched images:", images)
+    res.status(200).json(images)
   } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-}
-
-exports.getImageById = async (req, res) => {
-  const { id } = req.params
-  try {
-    const image = await imageModel.findById(id)
-    if (!image) return res.status(404).json({ error: "Image not found" })
-    res.json(image)
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-}
-
-exports.updateImage = async (req, res) => {
-  const { id } = req.params
-  const { img_name, img_display } = req.body
-  try {
-    const image = await imageModel.update(id, { img_name, img_display })
-    if (!image) return res.status(404).json({ error: "Image not found" })
-    res.json(image)
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-}
-
-exports.deleteImage = async (req, res) => {
-  const { id } = req.params
-  try {
-    const image = await imageModel.delete(id)
-    if (!image) return res.status(404).json({ error: "Image not found" })
-    res.json({ message: "Image deleted" })
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-}
-
-exports.linkCategoryImage = async (req, res) => {
-  const { cat_fk, img_fk } = req.body
-  try {
-    const link = await imageModel.linkCategoryImage(cat_fk, img_fk)
-    res.status(201).json(link)
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-}
-
-exports.getCategoryImages = async (req, res) => {
-  try {
-    const links = await imageModel.getCategoryImages()
-    res.json(links)
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-}
-
-exports.linkProductImage = async (req, res) => {
-  const { prod_fk, img_fk } = req.body
-  try {
-    const link = await imageModel.linkProductImage(prod_fk, img_fk)
-    res.status(201).json(link)
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-}
-
-exports.getProductImages = async (req, res) => {
-  try {
-    const links = await imageModel.getProductImages()
-    res.json(links)
-  } catch (error) {
-    res.status(500).json({ error: error.message })
+    console.error("Get images by product ID error:", error.stack)
+    res.status(500).json({ error: "Internal server error" })
   }
 }

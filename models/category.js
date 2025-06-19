@@ -1,5 +1,6 @@
 const pool = require("../config/database")
-const qString = "select distinct categories.id,categories.cat_name,categories.cat_desc,categories.cat_vid , count(products.id) prod_count ,count(category_image.img_fk) img_count from categories left join products on categories.id=products.cat_fk left join category_image on categories.id=category_image.img_fk group by categories.id, categories.cat_name,categories.cat_desc,categories.cat_vid"
+const qString = "select distinct categories.id,categories.cat_name,categories.cat_desc,categories.cat_vid , count(products.id) prod_count from categories left join products on categories.id=products.cat_fk group by categories.id, categories.cat_name,categories.cat_desc,categories.cat_vid"
+
 const Category = {
   findAll: async () => {
     const result = await pool.query(qString)

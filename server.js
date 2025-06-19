@@ -1,26 +1,24 @@
 const express = require("express")
 const dotenv = require("dotenv")
 const cors = require("cors")
-const userRoutes = require("./routes/userRoutes")
-const categoryRoutes = require("./routes/categoryRoutes")
-const productRoutes = require("./routes/productRoutes")
-const imageRoutes = require("./routes/imageRoutes")
 
-console.log("Attempting to load userRoutes, categoryRoutes, and imageRoutes and productRoutes...")
+console.log("Attempting to load userRoutes, categoryRoutes, imageRoutes, and productRoutes...")
 
+let userRoutes, categoryRoutes, imageRoutes, productRoutes
 try {
-  const productRoutes = require("./routes/productRoutes")
-  const userRoutes = require("./routes/userRoutes")
-  const categoryRoutes = require("./routes/categoryRoutes")
-  const imageRoutes = require("./routes/imageRoutes") // Load image routes
-
-  console.log("userRoutes.js, categoryRoutes.js, and imageRoutes.js and productRoutes loaded successfully")
+  userRoutes = require("./routes/userRoutes")
+  categoryRoutes = require("./routes/categoryRoutes")
+  imageRoutes = require("./routes/imageRoutes")
+  productRoutes = require("./routes/productRoutes")
+  console.log("userRoutes.js, categoryRoutes.js, imageRoutes.js, and productRoutes.js loaded successfully")
 } catch (error) {
-  console.error("Failed to load routes:", error.stack)
+  console.error("Failed to load one or more route files:", error.message, error.stack)
+  process.exit(1)
 }
 
 if (!userRoutes || !categoryRoutes || !imageRoutes || !productRoutes) {
   console.error("One or more route files are undefined, routes will not be available")
+  process.exit(1)
 }
 
 dotenv.config()
@@ -35,6 +33,7 @@ app.use(
   })
 )
 
+app.use(express.static("images")) // Serve images statically
 app.use((req, res, next) => {
   console.log(`Received ${req.method} request for ${req.url} from ${req.get("origin")} with body:`, req.body)
   next()
@@ -42,7 +41,7 @@ app.use((req, res, next) => {
 app.use("/api", productRoutes)
 app.use("/api", userRoutes)
 app.use("/api", categoryRoutes)
-app.use("/api", imageRoutes) // Mount image routes under /api
+app.use("/api", imageRoutes)
 
 app.get("/", (req, res) => {
   res.json({ message: "SPP API is running" })
@@ -52,5 +51,3 @@ const PORT = process.env.PORT || 8080
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`)
 })
-// ... (existing server.js code)
-module.exports = app
