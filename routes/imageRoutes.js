@@ -8,7 +8,7 @@ const path = require("path")
 const storage = multer.diskStorage({
   destination: "./images/",
   filename: (req, file, cb) => {
-    console.log("Received file:", file.originalname) // Debug
+    console.log("Received file:", file.originalname)
     cb(null, `${Date.now()}-${file.originalname}`)
   }
 })
@@ -24,13 +24,13 @@ const fileFilter = (req, file, cb) => {
   }
 }
 
-const upload = multer({ storage, fileFilter, limits: { fileSize: 1000000 } }).array("image", 5) // Allow up to 5 images
+const upload = multer({ storage, fileFilter, limits: { fileSize: 1000000 } }).array("image", 5)
 
 router.post(
   "/images/product/:productId",
   authenticateToken,
   (req, res, next) => {
-    console.log("Middleware triggered, files:", req.files) // Debug
+    console.log("Middleware triggered, files:", req.files)
     upload(req, res, err => {
       if (err) {
         console.error("Multer error:", err.message)
@@ -43,5 +43,11 @@ router.post(
 )
 
 router.get("/images/product/:productId", authenticateToken, imageController.getImagesByProductId)
+
+router.get("/images/:id", authenticateToken, imageController.getImageById) // New endpoint
+// Add this line after router.get("/images/product/:productId", ...)
+router.delete("/images/:id", authenticateToken, imageController.deleteImage)
+
+router.put("/images/:id", authenticateToken, imageController.updateImage)
 
 module.exports = router

@@ -1,7 +1,7 @@
 const express = require("express")
 const dotenv = require("dotenv")
 const cors = require("cors")
-
+const path = require("path")
 console.log("Attempting to load userRoutes, categoryRoutes, imageRoutes, and productRoutes...")
 
 let userRoutes, categoryRoutes, imageRoutes, productRoutes
@@ -32,8 +32,8 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"]
   })
 )
-
-app.use(express.static("images")) // Serve images statically
+app.use("/images", express.static(path.join(__dirname, "images")))
+//app.use(express.static("images")) // Serve images statically
 app.use((req, res, next) => {
   console.log(`Received ${req.method} request for ${req.url} from ${req.get("origin")} with body:`, req.body)
   next()
