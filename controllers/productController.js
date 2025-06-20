@@ -48,29 +48,33 @@ exports.updateProduct = async (req, res) => {
   }
 }
 
-// ... (other methods)
-
-exports.deleteProduct = async (req, res) => {
+exports.getProductsByCategoryId = async (req, res) => {
   const { id } = req.params
   try {
-    const product = await Product.delete(id)
-    if (!product) return res.status(404).json({ error: "Product not found" })
-    res.json({ message: "Product deleted" })
+    console.log("Fetching products for category ID:", id)
+    if (!id || isNaN(parseInt(id))) {
+      return res.status(400).json({ error: "Invalid category ID" })
+    }
+    const products = await Product.findByCategoryId(parseInt(id))
+    console.log("Fetched products:", products)
+    res.status(200).json(products)
   } catch (error) {
-    console.error("Delete product error:", error.stack)
+    console.error("Get products by category ID error:", error.stack)
     res.status(500).json({ error: "Internal server error" })
   }
 }
 
-exports.getProductsByCategoryId = async (req, res) => {
+exports.deleteProduct = async (req, res) => {
   const { id } = req.params
   try {
-    console.log("Fetching products for category ID:", id) // Debug
-    const products = await Product.findByCategoryId(id)
-    console.log("Fetched products:", products) // Debug
-    res.json(products)
+    console.log("Deleting product with ID:", id)
+    if (!id || isNaN(parseInt(id))) {
+      return res.status(400).json({ error: "Invalid product ID" })
+    }
+    const product = await Product.delete(parseInt(id))
+    res.status(200).json({ message: "Product deleted" })
   } catch (error) {
-    console.error("Get products by category ID error:", error.stack)
-    res.status(500).json({ error: "Internal server error" })
+    console.error("Delete product error:", error.stack)
+    res.status(400).json({ error: error.message })
   }
 }

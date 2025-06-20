@@ -28,14 +28,16 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: "Invalid username or password" })
     }
 
-    const token = jwt.sign({ user_id: user.user_id, username: user.username, admin: user.admin }, process.env.JWT_SECRET, { expiresIn: "1h" })
+    const token = jwt.sign({ user_id: user.user_id, username: user.username, admin: user.admin, avatar: user.avatar, bio: user.bio }, process.env.JWT_SECRET, { expiresIn: "1h" })
     console.log("Generated token for user:", username)
 
     res.status(200).json({
       user_id: user.user_id,
       username: user.username,
       admin: user.admin,
-      token: token
+      token: token,
+      avatar: user.avatar,
+      bio: user.bio
     })
   } catch (error) {
     console.error("Login error:", error.stack)
