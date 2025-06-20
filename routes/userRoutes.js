@@ -1,22 +1,21 @@
 const express = require("express")
 const router = express.Router()
-const { authenticateToken } = require("../middleware/auth")
 const userController = require("../controllers/userController")
 
-console.log("userRoutes.js loaded successfully")
+// Debug exports
+console.log("userController exports:", Object.keys(userController))
 
-// Password reset and authentication routes
-router.post("/request-password-reset", userController.requestPasswordReset) // Public
-router.post("/reset-password", userController.resetPassword) // Public, uses token from body
-router.post("/login", userController.login)
-router.post("/refresh", authenticateToken, userController.refreshToken)
-router.put("/users/:id/change-password", authenticateToken, userController.changePassword)
-
-// User management routes
-router.get("/users", authenticateToken, userController.getAllUsers)
-router.get("/users/:id", authenticateToken, userController.getUserById)
-router.post("/users", userController.createUser) // Remove authenticateToken if public registration
-router.put("/users/:id", authenticateToken, userController.updateUser)
-router.delete("/users/:id", authenticateToken, userController.deleteUser)
+router.post("/users/checkRegUsername", userController.checkUsername)
+router.post("/users/checkRegEmail", userController.checkEmail)
+router.post("/users", userController.createUser)
+router.post("/users/login", userController.login)
+router.post("/users/request-password-reset", userController.requestPasswordReset)
+router.post("/users/reset-password", userController.resetPassword)
+router.post("/refresh", userController.refreshToken)
+router.put("/users/change-password/:id", userController.changePassword)
+router.get("/users", userController.getAllUsers)
+router.get("/users/:id", userController.getUserById)
+router.put("/users/:id", userController.updateUser)
+router.delete("/users/:id", userController.deleteUser)
 
 module.exports = router

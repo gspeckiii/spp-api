@@ -1,4 +1,5 @@
 const pool = require("../config/database")
+const md5 = require("md5")
 
 const User = {
   findAll: async () => {
@@ -16,6 +17,17 @@ const User = {
     }
   },
 
+  findByEmail: async email => {
+    try {
+      console.log(`Querying email: ${email}`)
+      const result = await pool.query("SELECT * FROM users WHERE email ILIKE $1", [email])
+      console.log(`Query result rows: ${JSON.stringify(result.rows)}`)
+      return result.rows[0] || null
+    } catch (err) {
+      console.error("Find by email error:", err.stack)
+      throw new Error("Database error while finding user")
+    }
+  },
   findById: async id => {
     try {
       const result = await pool.query("SELECT * FROM users WHERE user_id = $1", [id])
@@ -28,16 +40,19 @@ const User = {
 
   findByUsername: async username => {
     try {
-      const result = await pool.query("SELECT * FROM users WHERE username = $1", [username])
-      return result.rows[0]
+      console.log(`Querying username: ${username}`)
+      const result = await pool.query("SELECT * FROM users WHERE username ILIKE $1", [username])
+      console.log(`Query result rows: ${JSON.stringify(result.rows)}`)
+      return result.rows[0] || null
     } catch (err) {
       console.error("Find by username error:", err.stack)
-      throw err
+      throw new Error("Database error while finding user")
     }
   },
 
   create: async user => {
-    const { username, email, avatar, bio, password, admin = false } = user
+    let { username, email, avatar, bio, password, admin = false } = user
+    avatar = `https://gravatar.com/avatar/${md5(email)}?s=128`
     try {
       const result = await pool.query("INSERT INTO users (username, email, avatar, bio, password, admin) VALUES ($1, $2, $3, $4, crypt($5, gen_salt('bf')), $6) RETURNING *", [username, email, avatar, bio, password, admin])
       return result.rows[0]
@@ -48,7 +63,8 @@ const User = {
   },
 
   update: async (id, user) => {
-    const { username, email, avatar, bio, password, admin } = user
+    let { username, email, avatar, bio, password, admin } = user
+    avatar = `https://gravatar.com/avatar/${md5(email)}?s=128`
     const currentUser = await User.findById(id)
     if (!currentUser) throw new Error("User not found")
 
