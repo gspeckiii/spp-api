@@ -1,5 +1,17 @@
 const pool = require("../config/database")
-const qString = "SELECT DISTINCT categories.id AS cat_id, categories.cat_name, categories.cat_desc, categories.cat_vid, COUNT(products.id) AS prod_count FROM categories LEFT JOIN products ON categories.id = products.cat_fk GROUP BY categories.id, categories.cat_name, categories.cat_desc, categories.cat_vid"
+const qString = `
+  SELECT DISTINCT 
+    categories.id AS cat_id, 
+    categories.cat_name, 
+    categories.cat_desc, 
+    categories.cat_vid, 
+    categories.cat_img_path, 
+  
+    COUNT(products.id) AS prod_count 
+  FROM categories 
+  LEFT JOIN products ON categories.id = products.cat_fk 
+  GROUP BY categories.id, categories.cat_name, categories.cat_desc, categories.cat_vid, categories.cat_img_path
+`
 
 const Category = {
   findAll: async () => {
@@ -12,9 +24,23 @@ const Category = {
       throw err
     }
   },
+
   findById: async id => {
     try {
-      const result = await pool.query("SELECT id AS cat_id, cat_name, cat_desc, cat_vid, (SELECT COUNT(*) FROM products WHERE cat_fk = $1) AS prod_count FROM categories WHERE id = $1", [id])
+      const result = await pool.query(
+        `
+        SELECT 
+          id AS cat_id, 
+          cat_name, 
+          cat_desc, 
+          cat_vid, 
+          cat_img_path
+          (SELECT COUNT(*) FROM products WHERE cat_fk = $1) AS prod_count 
+        FROM categories 
+        WHERE id = $1
+        `,
+        [id]
+      )
       console.log("Find by ID result:", result.rows[0])
       return result.rows[0]
     } catch (err) {
@@ -22,10 +48,24 @@ const Category = {
       throw err
     }
   },
+
   create: async category => {
     const { cat_name, cat_desc, cat_vid } = category
     try {
-      const result = await pool.query("INSERT INTO categories (cat_name, cat_desc, cat_vid) VALUES ($1, $2, $3) RETURNING id AS cat_id, cat_name, cat_desc, cat_vid, 0 AS prod_count", [cat_name, cat_desc, cat_vid || null])
+      const result = await pool.query(
+        `
+        INSERT INTO categories (cat_name, cat_desc, cat_vid) 
+        VALUES ($1, $2, $3) 
+        RETURNING 
+          id AS cat_id, 
+          cat_name, 
+          cat_desc, 
+          cat_vid, 
+          cat_img_path
+          0 AS prod_count
+        `,
+        [cat_name, cat_desc, cat_vid || null]
+      )
       console.log("Create category result:", result.rows[0])
       return result.rows[0]
     } catch (err) {
@@ -33,10 +73,28 @@ const Category = {
       throw err
     }
   },
+
   update: async (id, category) => {
     const { cat_name, cat_desc, cat_vid } = category
     try {
-      const result = await pool.query("UPDATE categories SET cat_name = $1, cat_desc = $2, cat_vid = $3 WHERE id = $4 RETURNING id AS cat_id, cat_name, cat_desc, cat_vid, (SELECT COUNT(*) FROM products WHERE cat_fk = $4) AS prod_count", [cat_name, cat_desc, cat_vid || null, id])
+      const result = await pool.query(
+        `
+        UPDATE categories 
+        SET 
+          cat_name = $1, 
+          cat_desc = $2, 
+          cat_vid = $3 
+        WHERE id = $4 
+        RETURNING 
+          id AS cat_id, 
+          cat_name, 
+          cat_desc, 
+          cat_vid, 
+          cat_img_path
+          (SELECT COUNT(*) FROM products WHERE cat_fk = $4) AS prod_count
+        `,
+        [cat_name, cat_desc, cat_vid || null, id]
+      )
       console.log("Update category result:", result.rows[0])
       return result.rows[0]
     } catch (err) {
@@ -44,9 +102,21 @@ const Category = {
       throw err
     }
   },
+
   delete: async id => {
     try {
-      const result = await pool.query("DELETE FROM categories WHERE id = $1 RETURNING id AS cat_id, cat_name, cat_desc, cat_vid", [id])
+      const result = await pool.query(
+        `
+        DELETE FROM categories 
+        WHERE id = $1 
+        RETURNING 
+          id AS cat_id, 
+          cat_name, 
+          cat_desc, 
+          cat_vid, 
+          cat_img_path`,
+        [id]
+      )
       console.log("Delete category result:", result.rows[0])
       return result.rows[0]
     } catch (err) {

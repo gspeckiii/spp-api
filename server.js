@@ -2,21 +2,22 @@ const express = require("express")
 const dotenv = require("dotenv")
 const cors = require("cors")
 const path = require("path")
-console.log("Attempting to load userRoutes, categoryRoutes, imageRoutes, and productRoutes...")
+console.log("Attempting to load userRoutes, categoryRoutes, imageRoutes, productRoutes, and categoryImageRoutes...")
 
-let userRoutes, categoryRoutes, imageRoutes, productRoutes
+let userRoutes, categoryRoutes, imageRoutes, productRoutes, categoryImageRoutes
 try {
   userRoutes = require("./routes/userRoutes")
   categoryRoutes = require("./routes/categoryRoutes")
   imageRoutes = require("./routes/imageRoutes")
   productRoutes = require("./routes/productRoutes")
-  console.log("userRoutes.js, categoryRoutes.js, imageRoutes.js, and productRoutes.js loaded successfully")
+  categoryImageRoutes = require("./routes/categoryImageRoutes")
+  console.log("userRoutes.js, categoryRoutes.js, imageRoutes.js, productRoutes.js, and categoryImageRoutes.js loaded successfully")
 } catch (error) {
   console.error("Failed to load one or more route files:", error.message, error.stack)
   process.exit(1)
 }
 
-if (!userRoutes || !categoryRoutes || !imageRoutes || !productRoutes) {
+if (!userRoutes || !categoryRoutes || !imageRoutes || !productRoutes || !categoryImageRoutes) {
   console.error("One or more route files are undefined, routes will not be available")
   process.exit(1)
 }
@@ -33,7 +34,6 @@ app.use(
   })
 )
 app.use("/images", express.static(path.join(__dirname, "images")))
-//app.use(express.static("images")) // Serve images statically
 app.use((req, res, next) => {
   console.log(`Received ${req.method} request for ${req.url} from ${req.get("origin")} with body:`, req.body)
   next()
@@ -42,6 +42,7 @@ app.use("/api", productRoutes)
 app.use("/api", userRoutes)
 app.use("/api", categoryRoutes)
 app.use("/api", imageRoutes)
+app.use("/api", categoryImageRoutes)
 
 app.get("/", (req, res) => {
   res.json({ message: "SPP API is running" })
