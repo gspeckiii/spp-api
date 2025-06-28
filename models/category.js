@@ -34,7 +34,7 @@ const Category = {
           cat_name, 
           cat_desc, 
           cat_vid, 
-          cat_img_path
+          cat_img_path,
           (SELECT COUNT(*) FROM products WHERE cat_fk = $1) AS prod_count 
         FROM categories 
         WHERE id = $1
@@ -114,7 +114,8 @@ const Category = {
           cat_name, 
           cat_desc, 
           cat_vid, 
-          cat_img_path`,
+          cat_img_path
+        `,
         [id]
       )
       console.log("Delete category result:", result.rows[0])

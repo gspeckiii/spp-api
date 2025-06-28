@@ -1,7 +1,6 @@
 const User = require("../models/user")
 const sgMail = require("@sendgrid/mail")
 const jwt = require("jsonwebtoken")
-const pool = require("../config/database")
 require("dotenv").config()
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
@@ -18,17 +17,17 @@ exports.login = async (req, res) => {
     }
     if (!user.password) {
       console.error("User object missing password field:", user)
-      return res.status(500).json({ error: "Internal server error: Password field missing" })
+      return res.status(500).json({ error: "Internal server error: User password not found in database" })
     }
 
     const isValidPassword = await User.verifyPassword(username, password)
     console.log("Password match result:", isValidPassword)
     if (!isValidPassword) {
-      console.log("Invalid password for username:", username, "Provided password:", password)
+      console.log("Invalid password for username:", username)
       return res.status(401).json({ error: "Invalid username or password" })
     }
 
-    const token = jwt.sign({ user_id: user.user_id, username: user.username, admin: user.admin, avatar: user.avatar, bio: user.bio }, process.env.JWT_SECRET, { expiresIn: "1h" })
+    const token = jwt.sign({ user_id: user.user_id, username: user.username, admin: user.admin, avatar: user.avatar, bio: user.bio, refresh_interval: user.refresh_interval }, process.env.JWT_SECRET, { expiresIn: "1h" })
     console.log("Generated token for user:", username)
 
     res.status(200).json({
@@ -37,20 +36,19 @@ exports.login = async (req, res) => {
       admin: user.admin,
       token: token,
       avatar: user.avatar,
-      bio: user.bio
+      bio: user.bio,
+      refresh_interval: user.refresh_interval || 30 * 60 * 1000
     })
   } catch (error) {
     console.error("Login error:", error.stack)
-    res.status(500).json({ error: "Internal server error" })
+    res.status(500).json({ error: "Internal server error", details: error.message })
   }
 }
 
 exports.requestPasswordReset = async (req, res) => {
   const { email } = req.body
   try {
-    const result = await pool.query("SELECT user_id, username FROM users WHERE email = $1", [email])
-    const user = result.rows[0]
-
+    const user = await User.findByEmail(email)
     if (!user) {
       return res.status(404).json({ error: "Email not found" })
     }
@@ -83,10 +81,10 @@ exports.resetPassword = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
     console.log("Decoded token:", decoded)
     const userId = decoded.user_id
-    console.log("Fetching user with ID:", userId)
+    console.log("Fetching user with user_id:", userId)
     const user = await User.findById(userId)
     if (!user) {
-      console.log("User not found for ID:", userId)
+      console.log("User not found for user_id:", userId)
       return res.status(404).json({ error: "User not found" })
     }
 
@@ -105,12 +103,50 @@ exports.resetPassword = async (req, res) => {
 
 exports.refreshToken = async (req, res) => {
   try {
+    console.log("Refresh token request, req.user:", req.user)
     const user = req.user
-    const newToken = jwt.sign({ user_id: user.user_id, username: user.username }, process.env.JWT_SECRET, { expiresIn: "1h" })
-    res.json({ token: newToken })
+    const dbUser = await User.findById(user.user_id)
+    if (!dbUser) {
+      console.log("User not found for user_id:", user.user_id)
+      return res.status(404).json({ error: "User not found" })
+    }
+    const newToken = jwt.sign({ user_id: user.user_id, username: user.username, admin: user.admin, avatar: user.avatar, bio: user.bio, refresh_interval: dbUser.refresh_interval }, process.env.JWT_SECRET, { expiresIn: "1h" })
+    const response = { token: newToken }
+    if (req.body.refreshInterval && Number.isInteger(req.body.refreshInterval) && req.body.refreshInterval >= 5 * 60 * 1000) {
+      await User.update(user.user_id, { refresh_interval: req.body.refreshInterval })
+      response.refreshInterval = req.body.refreshInterval
+    }
+    console.log("Refresh token response:", response)
+    res.json(response)
   } catch (error) {
-    console.error("Refresh error:", error.stack)
-    res.status(500).json({ error: "Internal server error" })
+    console.error("Refresh token error:", error.stack)
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ error: "Token expired" })
+    }
+    res.status(500).json({ error: "Internal server error", details: error.message })
+  }
+}
+
+exports.setRefreshInterval = async (req, res) => {
+  const { refreshInterval } = req.body
+  const userId = req.params.id
+  try {
+    console.log("Set refresh interval request, user_id:", userId, "refreshInterval:", refreshInterval, "req.user:", req.user)
+    if (!Number.isInteger(refreshInterval) || refreshInterval < 5 * 60 * 1000) {
+      console.log("Invalid refresh interval:", refreshInterval)
+      return res.status(400).json({ error: "Invalid refresh interval. Must be at least 5 minutes." })
+    }
+    const user = await User.findById(userId)
+    if (!user) {
+      console.log("User not found for user_id:", userId)
+      return res.status(404).json({ error: "User not found" })
+    }
+    await User.update(userId, { refresh_interval: refreshInterval })
+    console.log("Refresh interval updated for user_id:", userId)
+    res.json({ message: "Refresh interval updated", refreshInterval })
+  } catch (error) {
+    console.error("Set refresh interval error:", error.stack)
+    res.status(500).json({ error: "Internal server error", details: error.message })
   }
 }
 
@@ -178,7 +214,7 @@ exports.checkEmail = async (req, res) => {
     }
     const user = await User.findByEmail(email)
     console.log(`checkEmail result: ${JSON.stringify(user)}`)
-    res.status(200).json(user ? true : false) // Return true/false like course
+    res.status(200).json(user ? true : false)
   } catch (error) {
     console.error("Check email error:", error.stack)
     res.status(500).json({ error: "Internal server error" })
@@ -219,7 +255,7 @@ exports.updateUser = async (req, res) => {
 exports.deleteUser = async (req, res) => {
   try {
     const user = await User.delete(req.params.id)
-    res.status(200).json(user ? { message: "User deleted" } : null) // Align with course
+    res.status(200).json(user ? { message: "User deleted" } : null)
   } catch (error) {
     console.error("Delete user error:", error.stack)
     res.status(500).json({ error: "Internal server error" })
