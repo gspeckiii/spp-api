@@ -42,10 +42,12 @@ router.post(
   imageController.createImage
 )
 
-router.get("/images/product/:productId", authenticateToken, imageController.getImagesByProductId)
+router.get("/images/product/:productId", imageController.getImagesByProductId)
 
-router.get("/images/:id", authenticateToken, imageController.getImageById) // New endpoint
-// Add this line after router.get("/images/product/:productId", ...)
+router.get("/products/:productId/images", imageController.getImagesByProductId) // Added to match ProductSlider.js
+
+router.get("/images/:id", authenticateToken, imageController.getImageById)
+
 router.delete("/images/:id", authenticateToken, imageController.deleteImage)
 
 router.put("/images/:id", authenticateToken, imageController.updateImage)
