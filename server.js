@@ -1,5 +1,7 @@
 const express = require("express")
 const dotenv = require("dotenv")
+dotenv.config()
+console.log("DATABASE_URL from .env:", process.env.DATABASE_URL); // <-- Add this line
 const cors = require("cors")
 const path = require("path")
 console.log("Attempting to load userRoutes, categoryRoutes, imageRoutes, productRoutes, and categoryImageRoutes...")
@@ -22,7 +24,7 @@ if (!userRoutes || !categoryRoutes || !imageRoutes || !productRoutes || !categor
   process.exit(1)
 }
 
-dotenv.config()
+
 
 const app = express()
 app.use(express.json())

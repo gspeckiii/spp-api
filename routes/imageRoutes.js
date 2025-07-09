@@ -24,7 +24,7 @@ const fileFilter = (req, file, cb) => {
   }
 }
 
-const upload = multer({ storage, fileFilter, limits: { fileSize: 1000000 } }).array("image", 5)
+const upload = multer({ storage, fileFilter, limits: { fileSize: 5000000 } }).array("image", 5)
 
 router.post(
   "/images/product/:productId",

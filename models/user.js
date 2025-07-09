@@ -16,11 +16,11 @@ const User = {
       console.error("Test connection error:", err.stack)
       try {
         const client = await pool.connect()
-        const altResult = await client.query('SELECT * FROM spp_schema.users WHERE "user_id" = $1', [6])
-        console.log("Test query for spp_schema.users, user_id 6:", JSON.stringify(altResult.rows))
+        const altResult = await client.query('SELECT * FROM spp_db_schema.users WHERE "user_id" = $1', [6])
+        console.log("Test query for spp_db_schema.users, user_id 6:", JSON.stringify(altResult.rows))
         client.release()
       } catch (altErr) {
-        console.error("Alternative schema (spp_schema) test error:", altErr.stack)
+        console.error("Alternative schema (spp_db_schema) test error:", altErr.stack)
       }
       throw err
     }
@@ -59,11 +59,11 @@ const User = {
     } catch (err) {
       console.error("Find by ID error:", err.stack)
       try {
-        const altResult = await pool.query('SELECT * FROM spp_schema.users WHERE "user_id" = $1', [id])
+        const altResult = await pool.query('SELECT * FROM spp_db_schema.users WHERE "user_id" = $1', [id])
         console.log("Alternative schema query result for user_id:", id, JSON.stringify(altResult.rows[0]))
         return altResult.rows[0] || null
       } catch (altErr) {
-        console.error("Alternative schema (spp_schema) findById error:", altErr.stack)
+        console.error("Alternative schema (spp_db_schema) findById error:", altErr.stack)
       }
       throw err
     }
@@ -145,13 +145,13 @@ const User = {
     } catch (err) {
       console.error("Update user error:", err.stack)
       try {
-        const altQuery = `UPDATE spp_schema.users SET ${updateFields.join(", ")} WHERE "user_id" = $${index} RETURNING *`
+        const altQuery = `UPDATE spp_db_schema.users SET ${updateFields.join(", ")} WHERE "user_id" = $${index} RETURNING *`
         console.log("Trying alternative schema update query:", altQuery, "with values:", values)
         const altResult = await pool.query(altQuery, values)
         console.log("Alternative schema update result:", JSON.stringify(altResult.rows[0]))
         return altResult.rows[0]
       } catch (altErr) {
-        console.error("Alternative schema (spp_schema) update error:", altErr.stack)
+        console.error("Alternative schema (spp_db_schema) update error:", altErr.stack)
       }
       throw err
     }

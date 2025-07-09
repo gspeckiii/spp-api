@@ -6,7 +6,7 @@ const multer = require("multer")
 const path = require("path")
 
 // Log to verify controller import
-console.log("categoryImageController exports:", Object.keys(categoryImageController))
+  console.log("categoryImageController exports:", Object.keys(categoryImageController))
 
 const storage = multer.diskStorage({
   destination: "./images/categories/",
@@ -27,7 +27,7 @@ const fileFilter = (req, file, cb) => {
   }
 }
 
-const upload = multer({ storage, fileFilter, limits: { fileSize: 1000000 } }).single("image")
+const upload = multer({ storage, fileFilter, limits: { fileSize: 5000000 } }).single("image")
 
 router.put(
   "/images/category/:categoryId",

@@ -25,8 +25,10 @@ router.post("/users/login", userController.login)
 router.post("/users/request-password-reset", userController.requestPasswordReset)
 router.post("/users/reset-password", userController.resetPassword)
 router.post("/refresh", verifyToken, userController.refreshToken)
-router.post("/users/check-username", userController.checkUsername)
-router.post("/users/check-email", userController.checkEmail)
+// This is the new, correct route
+router.post("/users/checkRegUsername", userController.checkUsername)
+// Corrected route
+router.post("/users/checkRegEmail", userController.checkEmail)
 router.get("/users", userController.getAllUsers)
 router.get("/users/:id", userController.getUserById)
 router.post("/users", userController.createUser)
