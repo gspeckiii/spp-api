@@ -1,56 +1,89 @@
-const express = require("express")
-const dotenv = require("dotenv")
-dotenv.config()
-console.log("DATABASE_URL from .env:", process.env.DATABASE_URL); // <-- Add this line
-const cors = require("cors")
-const path = require("path")
-console.log("Attempting to load userRoutes, categoryRoutes, imageRoutes, productRoutes, and categoryImageRoutes...")
+// server.js
 
-let userRoutes, categoryRoutes, imageRoutes, productRoutes, categoryImageRoutes
+const express = require("express");
+const dotenv = require("dotenv");
+dotenv.config();
+const cors = require("cors");
+const path = require("path");
+
+console.log(
+  "Attempting to load userRoutes, categoryRoutes, imageRoutes, productRoutes, orderRoutes and categoryImageRoutes..."
+);
+
+let userRoutes,
+  categoryRoutes,
+  imageRoutes,
+  productRoutes,
+  categoryImageRoutes,
+  orderRoutes;
+
 try {
-  userRoutes = require("./routes/userRoutes")
-  categoryRoutes = require("./routes/categoryRoutes")
-  imageRoutes = require("./routes/imageRoutes")
-  productRoutes = require("./routes/productRoutes")
-  categoryImageRoutes = require("./routes/categoryImageRoutes")
-  console.log("userRoutes.js, categoryRoutes.js, imageRoutes.js, productRoutes.js, and categoryImageRoutes.js loaded successfully")
+  orderRoutes = require("./routes/orderRoutes");
+  userRoutes = require("./routes/userRoutes");
+  categoryRoutes = require("./routes/categoryRoutes");
+  imageRoutes = require("./routes/imageRoutes");
+  productRoutes = require("./routes/productRoutes");
+  categoryImageRoutes = require("./routes/categoryImageRoutes");
+  console.log("All route files loaded successfully");
 } catch (error) {
-  console.error("Failed to load one or more route files:", error.message, error.stack)
-  process.exit(1)
+  console.error(
+    "Failed to load one or more route files:",
+    error.message,
+    error.stack
+  );
+  process.exit(1);
 }
 
-if (!userRoutes || !categoryRoutes || !imageRoutes || !productRoutes || !categoryImageRoutes) {
-  console.error("One or more route files are undefined, routes will not be available")
-  process.exit(1)
+if (
+  !userRoutes ||
+  !categoryRoutes ||
+  !imageRoutes ||
+  !productRoutes ||
+  !categoryImageRoutes ||
+  !orderRoutes
+) {
+  console.error(
+    "One or more route files are undefined, routes will not be available"
+  );
+  process.exit(1);
 }
 
-
-
-const app = express()
-app.use(express.json())
+const app = express();
+app.use(express.json());
 app.use(
   cors({
     origin: "http://localhost:3000",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
-)
-app.use("/images", express.static(path.join(__dirname, "images")))
+);
+app.use("/images", express.static(path.join(__dirname, "images")));
 app.use((req, res, next) => {
-  console.log(`Received ${req.method} request for ${req.url} from ${req.get("origin")} with body:`, req.body)
-  next()
-})
-app.use("/api", productRoutes)
-app.use("/api", userRoutes)
-app.use("/api", categoryRoutes)
-app.use("/api", imageRoutes)
-app.use("/api", categoryImageRoutes)
+  console.log(
+    `Received ${req.method} request for ${req.url} from ${req.get(
+      "origin"
+    )} with body:`,
+    req.body
+  );
+  next();
+});
+
+// Mount all the top-level routers
+app.use("/api", productRoutes);
+app.use("/api", userRoutes);
+app.use("/api", categoryRoutes);
+app.use("/api", imageRoutes);
+app.use("/api", categoryImageRoutes);
+app.use("/api", orderRoutes); // This is correct. It will handle all routes starting with /api/orders/...
+
+// === THE FIX: REMOVED the incorrect nested route from here ===
+// app.use("/orders/:orderId/items", orderItemRoutes); // THIS LINE IS DELETED
 
 app.get("/", (req, res) => {
-  res.json({ message: "SPP API is running" })
-})
+  res.json({ message: "SPP API is running" });
+});
 
-const PORT = process.env.PORT || 8080
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
-})
+  console.log(`Server running on port ${PORT}`);
+});
