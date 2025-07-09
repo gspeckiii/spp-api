@@ -8,6 +8,7 @@ const { authenticateToken } = require("../middleware/auth.js");
 // === THE FIX: Import and use the nested routers here ===
 const orderItemRouter = require("./orderItemRoutes");
 const paymentRouter = require("./paymentRoutes");
+const fulfillmentRouter = require("./fulfillmentRoutes");
 
 // --- Main Order Routes ---
 router.post("/orders", authenticateToken, orderController.createOrder);
@@ -21,10 +22,9 @@ router.put(
 router.delete("/orders/:id", authenticateToken, orderController.deleteOrder);
 
 // --- Nested Routes ---
-// Any request that matches "/orders/:orderId/items" will be handled by the orderItemRouter
-router.use("/orders/:orderId/items", orderItemRouter);
 
-// Any request that matches "/orders/:orderId/payments" will be handled by the paymentRouter
+router.use("/orders/:orderId/items", orderItemRouter);
 router.use("/orders/:orderId/payments", paymentRouter);
+router.use("/orders/:orderId/fulfillment", fulfillmentRouter);
 
 module.exports = router;
