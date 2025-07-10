@@ -1,5 +1,22 @@
-// server.js
+// === THE DEFINITIVE DEBUGGING FIX ===
+// These listeners will catch any crash and print a detailed error.
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("!!!!!!!!!! UNHANDLED REJECTION !!!!!!!!!");
+  console.error("Reason:", reason.stack || reason);
+  console.error("Promise:", promise);
+  console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+  process.exit(1);
+});
 
+process.on("uncaughtException", (err, origin) => {
+  console.error("!!!!!!!!!! UNCAUGHT EXCEPTION !!!!!!!!!");
+  console.error("Error:", err.stack || err);
+  console.error("Origin:", origin);
+  console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+  process.exit(1);
+});
+
+// --- Your existing server code begins here ---
 const express = require("express");
 const dotenv = require("dotenv");
 dotenv.config();
@@ -74,10 +91,7 @@ app.use("/api", userRoutes);
 app.use("/api", categoryRoutes);
 app.use("/api", imageRoutes);
 app.use("/api", categoryImageRoutes);
-app.use("/api", orderRoutes); // This is correct. It will handle all routes starting with /api/orders/...
-
-// === THE FIX: REMOVED the incorrect nested route from here ===
-// app.use("/orders/:orderId/items", orderItemRoutes); // THIS LINE IS DELETED
+app.use("/api", orderRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "SPP API is running" });
