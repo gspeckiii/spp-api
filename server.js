@@ -67,13 +67,34 @@ if (
 
 const app = express();
 app.use(express.json());
-app.use(
-  cors({
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
+
+// --- THE DEFINITIVE CORS FIX ---
+
+// 1. Define your allowed origins
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://shermanpeckproductions.com",
+  "https://www.shermanpeckproductions.com",
+];
+
+// 2. Configure the cors middleware
+const corsOptions = {
+  origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg =
+        "The CORS policy for this site does not allow access from the specified Origin.";
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+};
+
+// 3. Apply the CORS middleware to your entire application
+// This will automatically handle OPTIONS preflight requests.
+app.use(cors(corsOptions));
+
 app.use("/images", express.static(path.join(__dirname, "images")));
 app.use((req, res, next) => {
   console.log(
