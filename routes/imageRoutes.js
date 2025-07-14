@@ -7,11 +7,16 @@ const imageController = require("../controllers/imageController");
 const multer = require("multer");
 const path = require("path");
 
-// === THE DEFINITIVE FIX: Restore the original filename logic ===
+// === THE DEFINITIVE FIX: Use an environment variable for the destination ===
+
+// If UPLOAD_PATH is set in .env, use it. Otherwise, default to the local path for development.
+const uploadDestination = process.env.UPLOAD_PATH
+  ? path.join(process.env.UPLOAD_PATH, "products")
+  : "./images/products/";
+
 const storage = multer.diskStorage({
-  destination: "./images/", // Ensure this directory exists
+  destination: uploadDestination,
   filename: (req, file, cb) => {
-    // This correctly combines the current timestamp with the original filename.
     cb(null, `${Date.now()}-${file.originalname}`);
   },
 });
@@ -35,15 +40,16 @@ const upload = multer({
 
 router.post(
   "/images/product/:productId",
-  authenticateToken,
+
   upload.array("image", 5),
+  authenticateToken,
   imageController.createImage
 );
 
 // --- All other routes remain the same ---
 router.get("/images/product/:productId", imageController.getImagesByProductId);
 router.get("/products/:productId/images", imageController.getImagesByProductId);
-router.get("/images/:id", authenticateToken, imageController.getImageById);
+router.get("/images/:id", imageController.getImageById);
 router.delete("/images/:id", authenticateToken, imageController.deleteImage);
 router.put("/images/:id", authenticateToken, imageController.updateImage);
 
