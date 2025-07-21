@@ -1,13 +1,20 @@
-const express = require("express")
-const router = express.Router()
+// routes/productRoutes.js
 
-const productController = require("../controllers/productController")
+const express = require("express");
+const router = express.Router();
 
-router.post("/products", productController.createProduct)
-router.get("/products", productController.getAllProducts)
-router.get("/products/:id", productController.getProductById)
-router.put("/products/:id", productController.updateProduct)
-router.delete("/products/:id", productController.deleteProduct)
-router.get("/products/category/:id", productController.getProductsByCategoryId) // Custom route
+const productController = require("../controllers/productController");
 
-module.exports = router
+router.post("/products", productController.createProduct);
+router.get("/products", productController.getAllProducts);
+
+// === NEW ROUTE ADDED HERE ===
+// This specific route must come BEFORE the general '/products/:id' route
+router.get("/products/historic", productController.getHistoricProducts);
+
+router.get("/products/category/:id", productController.getProductsByCategoryId);
+router.get("/products/:id", productController.getProductById);
+router.put("/products/:id", productController.updateProduct);
+router.delete("/products/:id", productController.deleteProduct);
+
+module.exports = router;
