@@ -2,6 +2,8 @@
 
 const Product = require("../models/product");
 
+// ... (createProduct, getAllProducts, getProductById are unchanged)
+
 exports.createProduct = async (req, res) => {
   const { cat_fk, prod_name, prod_cost, prod_desc } = req.body;
   try {
@@ -62,14 +64,21 @@ exports.updateProduct = async (req, res) => {
   }
 };
 
+// === MODIFIED FUNCTION ===
+// Reads the 'filter' query parameter from the request
 exports.getProductsByCategoryId = async (req, res) => {
   const { id } = req.params;
+  const { filter } = req.query; // e.g., ?filter=historic
+
   try {
-    console.log("Fetching products for category ID:", id);
+    console.log(
+      `Fetching products for category ID: ${id} with filter: ${filter}`
+    );
     if (!id || isNaN(parseInt(id))) {
       return res.status(400).json({ error: "Invalid category ID" });
     }
-    const products = await Product.findByCategoryId(parseInt(id));
+    // Pass the filter to the model function
+    const products = await Product.findByCategoryId(parseInt(id), filter);
     console.log("Fetched products:", products);
     res.status(200).json(products);
   } catch (error) {
@@ -78,7 +87,8 @@ exports.getProductsByCategoryId = async (req, res) => {
   }
 };
 
-// === NEW CONTROLLER FUNCTION ADDED HERE ===
+// ... (getHistoricProducts, deleteProduct are unchanged)
+
 exports.getHistoricProducts = async (req, res) => {
   try {
     console.log("Fetching historic products");
@@ -97,7 +107,7 @@ exports.deleteProduct = async (req, res) => {
     if (!id || isNaN(parseInt(id))) {
       return res.status(400).json({ error: "Invalid product ID" });
     }
-    await Product.delete(parseInt(id)); // Corrected this line to not expect a return value to be sent to client
+    await Product.delete(parseInt(id));
     res.status(200).json({ message: "Product deleted" });
   } catch (error) {
     console.error("Delete product error:", error.stack);

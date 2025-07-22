@@ -103,13 +103,26 @@ const Product = {
     }
   },
 
-  findByCategoryId: async (categoryId) => {
-    const qry =
-      "SELECT products.id, products.prod_name, products.prod_desc, products.prod_cost, count(image_product.id) AS img_count FROM products LEFT JOIN categories ON products.cat_fk = categories.id LEFT JOIN image_product ON products.id = image_product.product_id WHERE categories.id = $1 AND products.historic = false GROUP BY products.id;";
+  // === MODIFIED FUNCTION ===
+  // Added a 'filter' parameter to dynamically change the query.
+  // filter can be 'current', 'historic', or 'all'. Defaults to 'current'.
+  findByCategoryId: async (categoryId, filter = "current") => {
+    let qry =
+      "SELECT products.id, products.prod_name, products.prod_desc, products.prod_cost, count(image_product.id) AS img_count FROM products LEFT JOIN categories ON products.cat_fk = categories.id LEFT JOIN image_product ON products.id = image_product.product_id WHERE categories.id = $1";
+
+    // Add filter condition based on the 'filter' parameter
+    if (filter === "current") {
+      qry += " AND products.historic = false";
+    } else if (filter === "historic") {
+      qry += " AND products.historic = true";
+    }
+    // If filter is 'all', no additional WHERE clause is needed.
+
+    qry += " GROUP BY products.id;";
+
     try {
       console.log(
-        "Executing findByCategoryId query for category ID:",
-        categoryId
+        `Executing findByCategoryId query for category ID: ${categoryId} with filter: ${filter}`
       );
       const result = await pool.query(qry, [categoryId]);
       console.log("Find by category ID result:", result.rows);
