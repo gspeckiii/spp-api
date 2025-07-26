@@ -1,30 +1,40 @@
-// routes/orderRoutes.js
-
 const express = require("express");
 const router = express.Router();
 const orderController = require("../controllers/orderController");
+const paymentController = require("../controllers/paymentController"); // Import paymentController
 const { authenticateToken } = require("../middleware/auth.js");
+const { checkOrderOwnership } = require("../controllers/orderItemController"); // Import middleware
 
-// === THE FIX: Import and use the nested routers here ===
+// === Import your nested routers ===
 const orderItemRouter = require("./orderItemRoutes");
-const paymentRouter = require("./paymentRoutes");
+const paymentRouter = require("./paymentRoutes"); // This is the simplified one from above
 const fulfillmentRouter = require("./fulfillmentRoutes");
 
 // --- Main Order Routes ---
 router.post("/orders", authenticateToken, orderController.createOrder);
 router.get("/orders", authenticateToken, orderController.getUserOrders);
-router.get("/orders/:id", authenticateToken, orderController.getOrderById);
-router.put(
-  "/orders/:id/status",
+// NEW - Consistent with other routes
+router.get(
+  "/orders/:orderId",
   authenticateToken,
-  orderController.updateOrderStatus
+  checkOrderOwnership,
+  orderController.getOrderById
 );
-router.delete("/orders/:id", authenticateToken, orderController.deleteOrder);
+// ... other main routes
 
-// --- Nested Routes ---
+// --- NEW PAYMENT INTENT ROUTE ---
+// Add the route for creating a Stripe Payment Intent. It's a specific action on an order.
+router.post(
+  "/orders/:orderId/create-payment-intent",
+  authenticateToken,
+  checkOrderOwnership,
+  paymentController.createPaymentIntent
+);
 
+// --- Nested Resource Routes ---
+// These routes handle collections of items related to an order.
 router.use("/orders/:orderId/items", orderItemRouter);
-router.use("/orders/:orderId/payments", paymentRouter);
+router.use("/orders/:orderId/payments", paymentRouter); // Now correctly handles GET only
 router.use("/orders/:orderId/fulfillment", fulfillmentRouter);
 
 module.exports = router;

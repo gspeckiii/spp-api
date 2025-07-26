@@ -7,11 +7,9 @@ exports.createOrder = async (req, res) => {
   const user_id = req.user.user_id; // From auth middleware
 
   if (!items || !Array.isArray(items) || items.length === 0 || !total_amount) {
-    return res
-      .status(400)
-      .json({
-        error: "Missing required fields: items array and total_amount.",
-      });
+    return res.status(400).json({
+      error: "Missing required fields: items array and total_amount.",
+    });
   }
 
   try {
@@ -37,24 +35,28 @@ exports.getUserOrders = async (req, res) => {
   }
 };
 
-exports.getOrderById = async (req, res) => {
-  const { id } = req.params;
-  const user_id = req.user.user_id;
+// controllers/orderController.js
 
-  try {
-    const order = await Order.findById(id, user_id);
-    if (!order) {
-      return res
-        .status(404)
-        .json({
-          error: "Order not found or you do not have permission to view it.",
-        });
-    }
-    res.json(order);
-  } catch (error) {
-    res.status(500).json({ error: "Internal server error." });
-  }
+// ... (other controller functions like createOrder)
+
+/**
+ * Gets a single order by its ID.
+ * The checkOrderOwnership middleware has already been run,
+ * so we know the order exists and belongs to the user.
+ */
+exports.getOrderById = async (req, res) => {
+  // The middleware attached the complete order details to req.order.
+  // We just need to send it as the response.
+  // No need to query the database again.
+
+  // You can add a final debug log to be 100% sure.
+  console.log("--- SUCCESSFULLY REACHED getOrderById CONTROLLER ---");
+  console.log("Sending order data back to client:", req.order);
+
+  res.json(req.order);
 };
+
+// ... (other controller functions)
 
 exports.updateOrderStatus = async (req, res) => {
   const { id } = req.params;
@@ -80,11 +82,9 @@ exports.updateOrderStatus = async (req, res) => {
   try {
     const updatedOrder = await Order.updateStatus(id, user_id, status);
     if (!updatedOrder) {
-      return res
-        .status(404)
-        .json({
-          error: "Order not found or you do not have permission to update it.",
-        });
+      return res.status(404).json({
+        error: "Order not found or you do not have permission to update it.",
+      });
     }
     res.json({
       message: "Order status updated successfully",

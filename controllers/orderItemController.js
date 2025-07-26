@@ -8,20 +8,33 @@ const Order = require("../models/order"); // We need the Order model to verify o
  * This is a crucial security step for nested routes.
  */
 async function checkOrderOwnership(req, res, next) {
-  const { orderId } = req.params;
+  // === START DEBUGGING BLOCK ===
+  console.log("\n--- ENTERING checkOrderOwnership MIDDLEWARE ---");
+  console.log("Request Params (req.params):", req.params);
+  console.log("Authenticated User (req.user):", req.user);
+
+  const { orderId } = req.params; // Make sure this matches your route (:orderId)
   const userId = req.user.user_id;
 
+  console.log(`Attempting to find Order ID: ${orderId} for User ID: ${userId}`);
+  // === END DEBUGGING BLOCK ===
+
   try {
+    // This is the line we need to investigate.
     const order = await Order.findById(orderId, userId);
+
+    // === MORE DEBUGGING ===
+    console.log("Result from Order.findById:", order);
+
     if (!order) {
-      // Use findById since it already checks for user ownership
+      console.log(">>> Order not found or user mismatch. Sending 404. <<<\n");
       return res.status(404).json({
-        error:
-          "Order not found or you do not have permission to access its items.",
+        error: "Order not found or you do not have permission to access it.",
       });
     }
-    // If the order exists and is owned by the user, proceed.
-    req.order = order; // Optionally attach the order to the request for later use
+
+    console.log("--- Ownership Confirmed. Passing to next() --- \n");
+    req.order = order;
     next();
   } catch (error) {
     console.error("Error checking order ownership:", error);

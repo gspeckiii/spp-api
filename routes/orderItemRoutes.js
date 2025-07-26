@@ -9,26 +9,8 @@ const Order = require("../models/order");
 const { authenticateToken } = require("../middleware/auth.js");
 
 // Middleware for authorization (checking if the user owns the parent order)
-const checkOrderOwnership = async (req, res, next) => {
-  const { orderId } = req.params;
-  const userId = req.user.user_id;
+// In the file where checkOrderOwnership is defined (e.g., controllers/orderItemController.js)
 
-  try {
-    const order = await Order.findById(orderId, userId);
-    if (!order) {
-      return res
-        .status(404)
-        .json({
-          error:
-            "Order not found or you do not have permission to access its items.",
-        });
-    }
-    next();
-  } catch (error) {
-    console.error("Error checking order ownership:", error);
-    res.status(500).json({ error: "Internal server error." });
-  }
-};
 
 // --- CRUD Routes for Order Items ---
 // Each route is now individually protected with a chain of middleware.

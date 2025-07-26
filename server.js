@@ -15,13 +15,20 @@ process.on("uncaughtException", (err, origin) => {
   console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
   process.exit(1);
 });
-
+console.log(
+  "✅ SERVER RESTARTED SUCCESSFULLY! Running latest code as of [current date/time]."
+);
 // --- Your existing server code begins here ---
 const express = require("express");
 const dotenv = require("dotenv");
 dotenv.config();
 const cors = require("cors");
+// === THE FIX ===
+// Correctly import the path module.
 const path = require("path");
+
+// Import the payment controller for the webhook.
+const paymentController = require("./controllers/paymentController");
 
 console.log(
   "Attempting to load userRoutes, categoryRoutes, imageRoutes, productRoutes, orderRoutes and categoryImageRoutes..."
@@ -66,37 +73,37 @@ if (
 }
 
 const app = express();
+
+// Define the Stripe webhook route BEFORE express.json()
+app.post(
+  "/api/stripe-webhook",
+  express.raw({ type: "application/json" }),
+  paymentController.handleWebhook
+);
+
+// Define global middleware for all OTHER routes
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 // --- THE DEFINITIVE CORS FIX ---
-
-// 1. Define your allowed origins
 const allowedOrigins = [
   "http://localhost:3000",
   "https://shermanpeckproductions.com",
   "https://www.shermanpeckproductions.com",
 ];
-
-// 2. Configure the cors middleware
 const corsOptions = {
   origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg =
-        "The CORS policy for this site does not allow access from the specified Origin.";
-      return callback(new Error(msg), false);
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
     }
-    return callback(null, true);
   },
 };
-
-// 3. Apply the CORS middleware to your entire application
-// This will automatically handle OPTIONS preflight requests.
 app.use(cors(corsOptions));
 
 app.use("/images", express.static(path.join(__dirname, "images")));
+
 app.use((req, res, next) => {
   console.log(
     `Received ${req.method} request for ${req.url} from ${req.get(
