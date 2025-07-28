@@ -10,6 +10,13 @@ const orderItemRouter = require("./orderItemRoutes");
 const paymentRouter = require("./paymentRoutes"); // This is the simplified one from above
 const fulfillmentRouter = require("./fulfillmentRoutes");
 
+router.put(
+  "/orders/:orderId/cancel",
+  authenticateToken,
+  checkOrderOwnership, // Re-use middleware to ensure user owns the order
+  orderController.cancelOrder
+);
+
 // --- Main Order Routes ---
 router.post("/orders", authenticateToken, orderController.createOrder);
 router.get("/orders", authenticateToken, orderController.getUserOrders);

@@ -1,7 +1,11 @@
 // controllers/orderController.js
 
-const Order = require("../models/order"); // The data access model
+const Order = require("../models/order");
+const Fulfillment = require("../models/fulfillment");
 
+/**
+ * Creates a new order.
+ */
 exports.createOrder = async (req, res) => {
   const { items, total_amount } = req.body;
   const user_id = req.user.user_id; // From auth middleware
@@ -24,40 +28,69 @@ exports.createOrder = async (req, res) => {
   }
 };
 
+/**
+ * Fetches detailed orders for the logged-in user based on a status query.
+ * This is the correct version needed for the ProfileOrder component.
+ */
 exports.getUserOrders = async (req, res) => {
   const user_id = req.user.user_id;
+  const { status } = req.query; // e.g., ?status=open or ?status=closed
 
   try {
-    const orders = await Order.findAllByUserId(user_id);
+    const orders = await Order.findDetailedOrdersByUserId(user_id, status);
     res.json(orders);
   } catch (error) {
+    console.error("Error fetching user orders:", error);
     res.status(500).json({ error: "Internal server error." });
   }
 };
 
-// controllers/orderController.js
-
-// ... (other controller functions like createOrder)
-
 /**
- * Gets a single order by its ID.
- * The checkOrderOwnership middleware has already been run,
- * so we know the order exists and belongs to the user.
+ * Gets a single order by its ID after ownership has been verified by middleware.
  */
 exports.getOrderById = async (req, res) => {
-  // The middleware attached the complete order details to req.order.
-  // We just need to send it as the response.
-  // No need to query the database again.
-
-  // You can add a final debug log to be 100% sure.
-  console.log("--- SUCCESSFULLY REACHED getOrderById CONTROLLER ---");
-  console.log("Sending order data back to client:", req.order);
-
+  // The checkOrderOwnership middleware attaches the order details to req.order.
   res.json(req.order);
 };
 
-// ... (other controller functions)
+/**
+ * Allows a user to cancel their own order if it's in a cancellable state.
+ */
+exports.cancelOrder = async (req, res) => {
+  const { order } = req; // Attached by checkOrderOwnership middleware
+  const { orderId } = req.params;
+  const user_id = req.user.user_id;
 
+  try {
+    const cancellableStatuses = ["pending_payment", "processing"];
+    const fulfillment = await Fulfillment.findByOrderId(orderId);
+
+    if (
+      !cancellableStatuses.includes(order.order_status) ||
+      (fulfillment && fulfillment.fulfillment_status !== "unfulfilled")
+    ) {
+      return res
+        .status(403)
+        .json({
+          error: "This order cannot be cancelled at its current stage.",
+        });
+    }
+
+    const updatedOrder = await Order.updateStatus(
+      orderId,
+      user_id,
+      "cancelled"
+    );
+    res.json({ message: "Order cancelled successfully", order: updatedOrder });
+  } catch (error) {
+    console.error(`Error cancelling order ${orderId}:`, error);
+    res.status(500).json({ error: "Internal server error." });
+  }
+};
+
+/**
+ * Updates the status of an order (typically for admin use).
+ */
 exports.updateOrderStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
@@ -82,9 +115,11 @@ exports.updateOrderStatus = async (req, res) => {
   try {
     const updatedOrder = await Order.updateStatus(id, user_id, status);
     if (!updatedOrder) {
-      return res.status(404).json({
-        error: "Order not found or you do not have permission to update it.",
-      });
+      return res
+        .status(404)
+        .json({
+          error: "Order not found or you do not have permission to update it.",
+        });
     }
     res.json({
       message: "Order status updated successfully",
@@ -95,6 +130,9 @@ exports.updateOrderStatus = async (req, res) => {
   }
 };
 
+/**
+ * Deletes an order (typically for admin use).
+ */
 exports.deleteOrder = async (req, res) => {
   const { id } = req.params;
   const user_id = req.user.user_id;
