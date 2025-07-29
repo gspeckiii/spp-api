@@ -15,40 +15,40 @@ process.on("uncaughtException", (err, origin) => {
   console.error("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
   process.exit(1);
 });
-console.log(
-  "✅ SERVER RESTARTED SUCCESSFULLY! Running latest code as of [current date/time]."
-);
+
 // --- Your existing server code begins here ---
 const express = require("express");
 const dotenv = require("dotenv");
 dotenv.config();
 const cors = require("cors");
-// === THE FIX ===
-// Correctly import the path module.
 const path = require("path");
-
+const easypostWebhookRoutes = require("./routes/easypostWebhookRoutes");
 // Import the payment controller for the webhook.
 const paymentController = require("./controllers/paymentController");
 
 console.log(
-  "Attempting to load userRoutes, categoryRoutes, imageRoutes, productRoutes, orderRoutes and categoryImageRoutes..."
+  "Attempting to load all route files: userRoutes, categoryRoutes, imageRoutes, productRoutes, orderRoutes, categoryImageRoutes, and adminRoutes..."
 );
 
+// Correctly declare all route variables
 let userRoutes,
   categoryRoutes,
   imageRoutes,
   productRoutes,
   categoryImageRoutes,
-  orderRoutes;
+  orderRoutes,
+  adminRoutes; // <-- Fixed declaration
 
 try {
-  orderRoutes = require("./routes/orderRoutes");
+  // Require all route files
   userRoutes = require("./routes/userRoutes");
   categoryRoutes = require("./routes/categoryRoutes");
   imageRoutes = require("./routes/imageRoutes");
   productRoutes = require("./routes/productRoutes");
+  orderRoutes = require("./routes/orderRoutes");
   categoryImageRoutes = require("./routes/categoryImageRoutes");
-  console.log("All route files loaded successfully");
+  adminRoutes = require("./routes/adminRoutes"); // <-- Correctly assigned
+  console.log("All route files loaded successfully.");
 } catch (error) {
   console.error(
     "Failed to load one or more route files:",
@@ -58,29 +58,41 @@ try {
   process.exit(1);
 }
 
+// Check if any route files failed to load
 if (
   !userRoutes ||
   !categoryRoutes ||
   !imageRoutes ||
   !productRoutes ||
   !categoryImageRoutes ||
-  !orderRoutes
+  !orderRoutes ||
+  !adminRoutes
 ) {
   console.error(
-    "One or more route files are undefined, routes will not be available"
+    "One or more route files are undefined, which means they failed to load. The server will not start."
   );
   process.exit(1);
 }
 
 const app = express();
 
-// Define the Stripe webhook route BEFORE express.json()
+// IMPORTANT: Define the Stripe webhook route BEFORE express.json()
+// This route needs the raw request body.
 app.post(
   "/api/stripe-webhook",
   express.raw({ type: "application/json" }),
   paymentController.handleWebhook
 );
-
+app.use("/api/easypost-webhook", (req, res, next) => {
+  let data = "";
+  req.on("data", (chunk) => {
+    data += chunk;
+  });
+  req.on("end", () => {
+    req.rawBody = data;
+    next();
+  });
+});
 // Define global middleware for all OTHER routes
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ limit: "10mb", extended: true }));
@@ -93,6 +105,7 @@ const allowedOrigins = [
 ];
 const corsOptions = {
   origin: function (origin, callback) {
+    // allow requests with no origin (like mobile apps or curl requests)
     if (!origin || allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
@@ -102,14 +115,13 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
+// Serve static images
 app.use("/images", express.static(path.join(__dirname, "images")));
 
+// Optional: Logging middleware to see incoming requests
 app.use((req, res, next) => {
   console.log(
-    `Received ${req.method} request for ${req.url} from ${req.get(
-      "origin"
-    )} with body:`,
-    req.body
+    `Received ${req.method} request for ${req.url} from ${req.get("origin")}`
   );
   next();
 });
@@ -121,12 +133,14 @@ app.use("/api", categoryRoutes);
 app.use("/api", imageRoutes);
 app.use("/api", categoryImageRoutes);
 app.use("/api", orderRoutes);
-
+app.use("/api/admin", adminRoutes); // Mount the admin router under its own prefix
+app.use("/api/easypost-webhook", easypostWebhookRoutes);
+// Root endpoint
 app.get("/", (req, res) => {
   res.json({ message: "SPP API is running" });
 });
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Server is running successfully on port ${PORT}`);
 });

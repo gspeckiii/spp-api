@@ -2,7 +2,7 @@
 
 const Order = require("../models/order");
 const Fulfillment = require("../models/fulfillment");
-
+const Product = require("../models/product");
 /**
  * Creates a new order.
  */
@@ -69,11 +69,9 @@ exports.cancelOrder = async (req, res) => {
       !cancellableStatuses.includes(order.order_status) ||
       (fulfillment && fulfillment.fulfillment_status !== "unfulfilled")
     ) {
-      return res
-        .status(403)
-        .json({
-          error: "This order cannot be cancelled at its current stage.",
-        });
+      return res.status(403).json({
+        error: "This order cannot be cancelled at its current stage.",
+      });
     }
 
     const updatedOrder = await Order.updateStatus(
@@ -115,11 +113,9 @@ exports.updateOrderStatus = async (req, res) => {
   try {
     const updatedOrder = await Order.updateStatus(id, user_id, status);
     if (!updatedOrder) {
-      return res
-        .status(404)
-        .json({
-          error: "Order not found or you do not have permission to update it.",
-        });
+      return res.status(404).json({
+        error: "Order not found or you do not have permission to update it.",
+      });
     }
     res.json({
       message: "Order status updated successfully",
@@ -145,5 +141,71 @@ exports.deleteOrder = async (req, res) => {
     res.status(200).json({ message: result.message });
   } catch (error) {
     res.status(500).json({ error: "Internal server error." });
+  }
+};
+exports.adminGetOrders = async (req, res) => {
+  const { status } = req.query;
+  try {
+    const orders = await Order.findAllDetailedOrders(status);
+    res.json(orders);
+  } catch (error) {
+    console.error("Admin: Error fetching orders:", error);
+    res.status(500).json({ error: "Internal server error." });
+  }
+};
+exports.cancelOrder = async (req, res) => {
+  // req.order is attached by the checkOrderOwnership middleware
+  const orderToCancel = req.order;
+
+  // Business Logic: Check if the order is in a cancellable state.
+  // You might want to adjust these statuses.
+  const cancellableStatuses = ["pending_payment", "processing"];
+  if (!cancellableStatuses.includes(orderToCancel.order_status)) {
+    return res.status(409).json({
+      // 409 Conflict is a good status code here
+      error: `Order cannot be cancelled because its status is '${orderToCancel.order_status}'.`,
+    });
+  }
+
+  try {
+    // --- THE NEW LOGIC ---
+    // 1. Get the list of product IDs from the order items
+    // The req.order object from the middleware should already contain the items.
+    if (orderToCancel.items && orderToCancel.items.length > 0) {
+      const productIdsToRevert = orderToCancel.items.map(
+        (item) => item.product_id
+      );
+
+      console.log(
+        `Cancelling Order #${orderToCancel.order_id}. Reverting historic status for products:`,
+        productIdsToRevert
+      );
+
+      // 2. Call the new model function to set historic = false
+      await Product.markAsCurrent(productIdsToRevert);
+    }
+    // --- END OF NEW LOGIC ---
+
+    // 3. Update the order status to 'cancelled'
+    const cancelledOrder = await Order.updateStatus(
+      orderToCancel.order_id,
+      req.user.user_id,
+      "cancelled"
+    );
+
+    // (Optional) Here you could also trigger a refund via Stripe if payment was made,
+    // but that's a more complex flow. For now, we'll just update our DB.
+
+    res.json({
+      message: "Order cancelled successfully.",
+      order: cancelledOrder,
+    });
+  } catch (error) {
+    console.error(`Error cancelling order #${orderToCancel.order_id}:`, error);
+    res
+      .status(500)
+      .json({
+        error: "An internal error occurred while trying to cancel the order.",
+      });
   }
 };

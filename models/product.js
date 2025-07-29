@@ -103,9 +103,6 @@ const Product = {
     }
   },
 
-  // === MODIFIED FUNCTION ===
-  // Added a 'filter' parameter to dynamically change the query.
-  // filter can be 'current', 'historic', or 'all'. Defaults to 'current'.
   findByCategoryId: async (categoryId, filter = "current") => {
     let qry =
       "SELECT products.id, products.prod_name, products.prod_desc, products.prod_cost, count(image_product.id) AS img_count FROM products LEFT JOIN categories ON products.cat_fk = categories.id LEFT JOIN image_product ON products.id = image_product.product_id WHERE categories.id = $1";
@@ -133,7 +130,6 @@ const Product = {
     }
   },
 
-  // === NEW FUNCTION ADDED HERE ===
   findHistoric: async () => {
     const qry =
       "SELECT products.id, products.prod_name, products.prod_desc, products.prod_cost, count(image_product.id) AS img_count FROM products LEFT JOIN image_product ON products.id = image_product.product_id WHERE products.historic = true GROUP BY products.id;";
@@ -144,6 +140,71 @@ const Product = {
       return result.rows;
     } catch (err) {
       console.error("Find historic products error:", err.stack);
+      throw err;
+    }
+  },
+
+  /**
+   * Updates the 'historic' flag to true for a given list of product IDs.
+   * This is called from the payment webhook after a successful payment.
+   * @param {number[]} productIds - An array of product IDs to update.
+   * @returns {Promise<void>}
+   */
+  markAsHistoric: async (productIds) => {
+    // If there are no products in the order, exit early.
+    if (!productIds || productIds.length === 0) {
+      return;
+    }
+
+    // The 'ANY($1::int[])' syntax is the correct and safe way to use an array
+    // in a 'WHERE IN' clause with the node-postgres (pg) library.
+    const query = `
+      UPDATE products 
+      SET historic = true 
+      WHERE id = ANY($1::int[]);
+    `;
+
+    try {
+      await pool.query(query, [productIds]);
+      console.log(
+        `Successfully marked products as historic: ${productIds.join(", ")}`
+      );
+    } catch (err) {
+      console.error("Error in Product.markAsHistoric:", err.stack);
+      // We throw the error so the controller's try/catch block can handle it.
+      throw err;
+    }
+  },
+  // ... inside the Product object, after markAsHistoric
+
+  /**
+   * Updates the 'historic' flag to false for a given list of product IDs.
+   * This is typically used after an order has been cancelled by a user or admin.
+   * @param {number[]} productIds - An array of product IDs to update.
+   * @returns {Promise<void>}
+   */
+  markAsCurrent: async (productIds) => {
+    // If there are no products in the order, exit early.
+    if (!productIds || productIds.length === 0) {
+      return;
+    }
+
+    const query = `
+      UPDATE products 
+      SET historic = false 
+      WHERE id = ANY($1::int[]);
+    `;
+
+    try {
+      await pool.query(query, [productIds]);
+      console.log(
+        `Successfully marked products as current (not historic): ${productIds.join(
+          ", "
+        )}`
+      );
+    } catch (err) {
+      console.error("Error in Product.markAsCurrent:", err.stack);
+      // We throw the error so the controller's try/catch block can handle it.
       throw err;
     }
   },
