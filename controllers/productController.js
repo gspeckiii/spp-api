@@ -1,9 +1,30 @@
 // controllers/productController.js
-
+// === CHANGED FILE ===
 const Product = require("../models/product");
+const pool = require("../config/database"); // <-- Make sure pool is imported
 
-// ... (createProduct, getAllProducts, getProductById are unchanged)
+// ... (all your existing controller functions like createProduct, getAllProducts, etc.)
 
+// === ADD THIS NEW CONTROLLER FUNCTION ===
+exports.getPrintfulProducts = async (req, res) => {
+  try {
+    // Add the 'printful_thumbnail_url' to the SELECT statement
+    const { rows } = await pool.query(
+      `
+            SELECT 
+                id, prod_name, prod_cost, prod_desc, printful_thumbnail_url
+            FROM products
+            WHERE is_printful_product = TRUE ORDER BY prod_name
+            `
+    );
+    res.json(rows);
+  } catch (error) {
+    console.error("Get Printful products error:", error.stack);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// ... (rest of the file is unchanged)
 exports.createProduct = async (req, res) => {
   const { cat_fk, prod_name, prod_cost, prod_desc } = req.body;
   try {

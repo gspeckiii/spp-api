@@ -1,6 +1,6 @@
 const User = require("../models/user");
 // const sgMail = require("@sendgrid/mail") // REMOVED: No longer using SendGrid
-const { sendMail } = require("../middleware/emailService"); // ADDED: Import our new email service
+const { sendMail } = require("../services/EmailService"); // ADDED: Import our new email service
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
@@ -131,12 +131,9 @@ exports.requestPasswordReset = async (req, res) => {
     });
   } catch (error) {
     console.error("Request password reset error:", error.stack);
-    res
-      .status(500)
-      .json({
-        error:
-          "An error occurred while trying to send the password reset email.",
-      });
+    res.status(500).json({
+      error: "An error occurred while trying to send the password reset email.",
+    });
   }
 };
 

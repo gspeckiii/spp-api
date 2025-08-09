@@ -2,7 +2,7 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const Payment = require("../models/payment");
 const Order = require("../models/order");
 const Product = require("../models/product");
-const { sendMail } = require("../middleware/emailService"); // 1. Import the email service
+const { sendMail } = require("../services/EmailService"); // 1. Import the email service
 /**
  * Creates a Stripe Payment Intent for a given order.
  * This route is protected and expects middleware to have run.

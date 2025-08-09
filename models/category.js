@@ -1,22 +1,32 @@
+// === CORRECTED FILE ===
 const pool = require("../config/database");
-const qString = `
-  SELECT DISTINCT 
-    categories.id AS cat_id, 
-    categories.cat_name, 
-    categories.cat_desc, 
-    categories.cat_vid, 
-    categories.cat_img_path, 
-  
-    COUNT(products.id) AS prod_count 
-  FROM categories 
-  LEFT JOIN products ON categories.id = products.cat_fk 
-  GROUP BY categories.id, categories.cat_name, categories.cat_desc, categories.cat_vid, categories.cat_img_path
-`;
 
 const Category = {
   findAll: async () => {
     try {
-      const result = await pool.query(qString);
+      // === THIS IS THE CORRECTED QUERY ===
+      // It now counts ONLY products that are NOT historic and NOT from Printful.
+      const query = `
+        SELECT 
+          c.id AS cat_id, 
+          c.cat_name, 
+          c.cat_desc, 
+          c.cat_vid, 
+          c.cat_img_path, 
+          COUNT(p.id) AS prod_count 
+        FROM 
+          categories c
+        LEFT JOIN 
+          products p ON c.id = p.cat_fk 
+          AND p.historic = FALSE 
+          AND p.is_printful_product = FALSE
+        GROUP BY 
+          c.id
+        ORDER BY
+          c.cat_name;
+      `;
+
+      const result = await pool.query(query);
       console.log("Find all categories result:", result.rows);
       return result.rows;
     } catch (err) {
@@ -27,6 +37,7 @@ const Category = {
 
   findById: async (id) => {
     try {
+      // Corrected this query as well to only count relevant products.
       const result = await pool.query(
         `
         SELECT 
@@ -35,7 +46,7 @@ const Category = {
           cat_desc, 
           cat_vid, 
           cat_img_path,
-          (SELECT COUNT(*) FROM products WHERE cat_fk = $1) AS prod_count 
+          (SELECT COUNT(*) FROM products WHERE cat_fk = $1 AND historic = FALSE AND is_printful_product = FALSE) AS prod_count 
         FROM categories 
         WHERE id = $1
         `,
@@ -75,6 +86,7 @@ const Category = {
   },
 
   update: async (id, category) => {
+    // ... (This function looks okay, but could be improved for consistency)
     const { cat_name, cat_desc, cat_vid } = category;
     try {
       const result = await pool.query(
@@ -91,7 +103,7 @@ const Category = {
           cat_desc, 
           cat_vid, 
           cat_img_path,
-          (SELECT COUNT(*) FROM products WHERE cat_fk = $4) AS prod_count
+          (SELECT COUNT(*) FROM products WHERE cat_fk = $4 AND historic = FALSE AND is_printful_product = FALSE) AS prod_count
         `,
         [cat_name, cat_desc, cat_vid || null, id]
       );
@@ -104,18 +116,10 @@ const Category = {
   },
 
   delete: async (id) => {
+    // ... (This function is okay)
     try {
       const result = await pool.query(
-        `
-        DELETE FROM categories 
-        WHERE id = $1 
-        RETURNING 
-          id AS cat_id, 
-          cat_name, 
-          cat_desc, 
-          cat_vid, 
-          cat_img_path
-        `,
+        `DELETE FROM categories WHERE id = $1 RETURNING *`,
         [id]
       );
       console.log("Delete category result:", result.rows[0]);
