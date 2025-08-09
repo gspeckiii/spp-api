@@ -9,7 +9,6 @@ class OrderProcessingService {
     const { items, total_amount, fulfillmentDetails } = payload;
     const { user_id, username, email } = user;
 
-    // Get the Store ID from the environment variables, just like the API Key.
     const storeId = process.env.PRINTFUL_STORE_ID;
     if (!storeId) {
       throw new Error(
@@ -24,7 +23,6 @@ class OrderProcessingService {
       ...fulfillmentDetails,
     });
 
-    // ... (Your existing logic to get the correct printful_variant_id is correct)
     const internalProductIds = items.map((item) => item.product_id);
     const productsQuery = await pool.query(
       `SELECT id, printful_variant_id FROM products WHERE id = ANY($1::int[]) AND is_printful_product = TRUE`,
@@ -33,18 +31,20 @@ class OrderProcessingService {
     const productMap = new Map(
       productsQuery.rows.map((p) => [p.id, p.printful_variant_id])
     );
+
+    // === THIS IS THE CRITICAL FIX ===
+    // We are changing the property name from 'variant_id' to 'sync_variant_id'.
     const printfulItems = items
       .filter((item) => productMap.has(item.product_id))
       .map((item) => ({
-        variant_id: productMap.get(item.product_id),
+        sync_variant_id: productMap.get(item.product_id), // <-- THE CORRECT PROPERTY NAME
         quantity: item.quantity,
       }));
+    // ===============================
 
     if (printfulItems.length > 0) {
-      // === THIS IS THE CRITICAL FIX ===
-      // We are adding the 'store_id' property to the main level of the payload.
       const printfulOrderPayload = {
-        store_id: storeId, // <-- THE MISSING PIECE
+        store_id: storeId,
         recipient: {
           name: username,
           email: email,
@@ -58,9 +58,8 @@ class OrderProcessingService {
               : savedFulfillment.shipping_country,
           zip: savedFulfillment.shipping_postal_code,
         },
-        items: printfulItems,
+        items: printfulItems, // This array is now correctly formatted
       };
-      // ===============================
 
       const url = `https://api.printful.com/orders`;
       const options = {
