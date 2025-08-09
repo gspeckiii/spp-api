@@ -281,6 +281,34 @@ class Order {
       client.release();
     }
   }
+  // ... (inside the 'class Order' block)
+
+  /**
+   * Finds a detailed order by the Printful Order ID.
+   * This is used by the webhook to get customer details for the shipping email.
+   * @param {number} printfulOrderId - The ID provided by Printful.
+   * @returns {Promise<Object|null>} A promise that resolves to the detailed order object or null.
+   */
+  static async findByPrintfulOrderId(printfulOrderId) {
+    // This query is very similar to your existing findById, but it joins on
+    // the printful_order_id instead of the primary order_id.
+    const query = `
+      SELECT
+        o.order_id, o.total_amount, o.created_at,
+        u.username, u.email
+      FROM orders o
+      JOIN users u ON o.user_id = u.user_id
+      WHERE o.printful_order_id = $1
+      LIMIT 1;
+    `;
+    try {
+      const { rows } = await db.query(query, [printfulOrderId]);
+      return rows[0] || null;
+    } catch (error) {
+      console.error("Database error in Order.findByPrintfulOrderId:", error);
+      throw new Error("Failed to fetch order by Printful ID from database.");
+    }
+  }
 }
 
 module.exports = Order;
